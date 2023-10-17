@@ -7,11 +7,11 @@ pub struct Data {
     field: i32,
 }
 
-pub fn test_key_value_storage_single_thread(s: impl KeyValueStorage<Data>) {
+pub fn test_key_value_storage_single_thread(s: impl KeyValueStorage<String, Data>) {
     test_key_value_storage_range(&s, 0..100_000)
 }
 
-pub fn test_key_value_storage_multi_thread(s: impl KeyValueStorage<Data> + 'static) {
+pub fn test_key_value_storage_multi_thread(s: impl KeyValueStorage<String, Data> + Sync) {
     thread::scope(|scope| {
         let even = scope.spawn(|| {
             test_key_value_storage_range(&s, 0..100_000);
@@ -24,21 +24,25 @@ pub fn test_key_value_storage_multi_thread(s: impl KeyValueStorage<Data> + 'stat
     });
 }
 
-pub fn test_key_value_storage_range(s: &impl KeyValueStorage<Data>, r: Range<i32>) {
+fn test_key_value_storage_range(s: &impl KeyValueStorage<String, Data>, r: Range<i32>) {
     // Insert in reverse order, negated
     for i in r.clone().rev() {
-        s.insert(&key(i), &Data { field: -i });
+        s.insert(key(i), Data { field: -i }.into());
     }
     // Check in direct order
     assert_eq!(s.get(&key(r.start - 1)), None, "check in direct order");
     for i in r.clone() {
         let actual = s.get(&key(i));
-        assert_eq!(actual, Some(Data { field: -i }), "check in direct order");
+        assert_eq!(
+            actual,
+            Some(Data { field: -i }.into()),
+            "check in direct order"
+        );
     }
     assert_eq!(s.get(&key(r.end)), None, "check in direct order");
     // Replace in direct order, doubled
     for i in r.clone() {
-        s.insert(&key(i), &Data { field: i * 2 });
+        s.insert(key(i), Data { field: i * 2 }.into());
     }
     // Remove in reverse order
     assert_eq!(s.remove(&key(r.end)), None, "remove in reverse order");
@@ -46,7 +50,7 @@ pub fn test_key_value_storage_range(s: &impl KeyValueStorage<Data>, r: Range<i32
         let actual = s.remove(&key(i));
         assert_eq!(
             actual,
-            Some(Data { field: i * 2 }),
+            Some(Data { field: i * 2 }.into()),
             "remove in reverse order"
         );
     }
