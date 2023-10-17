@@ -1,14 +1,38 @@
-pub fn add(left: usize, right: usize) -> usize {
-    left + right
+use engine::ExternalStorage;
+
+pub mod engine;
+
+pub struct Storage<Engine> {
+    engine: Engine,
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+impl<Engine> Storage<Engine> {
+    pub fn new(engine: Engine) -> Self {
+        Self { engine }
+    }
+}
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
+pub trait KeyValueStorage<T>: Send + Sync {
+    fn insert(&self, key: &str, data: &T);
+
+    fn get(&self, key: &str) -> Option<T>;
+
+    fn remove(&self, key: &str) -> Option<T>;
+}
+
+impl<Engine, T> KeyValueStorage<T> for Storage<Engine>
+where
+    Engine: ExternalStorage<T> + Send + Sync,
+{
+    fn insert(&self, key: &str, value: &T) {
+        self.engine.insert(key, value)
+    }
+
+    fn get(&self, key: &str) -> Option<T> {
+        self.engine.get(key)
+    }
+
+    fn remove(&self, key: &str) -> Option<T> {
+        self.engine.remove(key)
     }
 }
