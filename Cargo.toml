@@ -2,6 +2,8 @@
 name = "storage"
 version = "0.1.0"
 edition = "2021"
+description = "Sync key-value storage abstraction over RAM/remote storage engine."
+authors = ["Petr Ermishkin"]
 
 [dependencies]
 parking_lot = "0.12"
