@@ -1,16 +1,35 @@
 use std::{borrow::Borrow, hash::Hash, sync::Arc};
 
-use engine::ExternalEngine;
+use engine::{External, ExternalEngine, Local, LocalEngine};
 
 pub mod engine;
 
-pub struct Storage<Engine> {
+pub struct Storage<Engine, EngineKind> {
     engine: Engine,
+    _marker: EngineKind,
 }
 
-impl<Engine> Storage<Engine> {
-    pub fn new(engine: Engine) -> Self {
-        Self { engine }
+impl<Engine, K, V> Storage<Engine, Local>
+where
+    Engine: LocalEngine<Key = K, Value = V>,
+{
+    pub fn with_local(engine: Engine) -> Self {
+        Self {
+            engine,
+            _marker: Local,
+        }
+    }
+}
+
+impl<Engine, T> Storage<Engine, External>
+where
+    Engine: ExternalEngine<Value = T>,
+{
+    pub fn with_external(engine: Engine) -> Self {
+        Self {
+            engine,
+            _marker: External,
+        }
     }
 }
 
@@ -37,9 +56,35 @@ pub trait KeyValueStorage<K, V> {
         Q: Eq + Hash + ToString + ?Sized;
 }
 
-impl<K, V, Engine> KeyValueStorage<K, V> for Storage<Engine>
+impl<K, V, Engine> KeyValueStorage<K, V> for Storage<Engine, Local>
 where
-    Engine: ExternalEngine<V>,
+    Engine: LocalEngine<Key = K, Value = V>,
+    K: Eq + Hash,
+{
+    fn insert(&self, key: K, value: Arc<V>) {
+        self.engine.insert(key, value)
+    }
+
+    fn get<Q>(&self, key: &Q) -> Option<Arc<V>>
+    where
+        K: Borrow<Q>,
+        Q: Eq + Hash + ?Sized,
+    {
+        self.engine.get(key)
+    }
+
+    fn remove<Q>(&self, key: &Q) -> Option<Arc<V>>
+    where
+        K: Borrow<Q>,
+        Q: Eq + Hash + ?Sized,
+    {
+        self.engine.remove(key)
+    }
+}
+
+impl<K, V, Engine> KeyValueStorage<K, V> for Storage<Engine, External>
+where
+    Engine: ExternalEngine<Value = V>,
     K: ToString,
 {
     fn insert(&self, key: K, value: Arc<V>) {

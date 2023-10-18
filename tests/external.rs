@@ -13,10 +13,12 @@ struct RedisMock<T> {
     map: Arc<RwLock<HashMap<String, T>>>,
 }
 
-impl<T> ExternalEngine<T> for RedisMock<T>
+impl<T> ExternalEngine for RedisMock<T>
 where
     T: Clone,
 {
+    type Value = T;
+
     fn insert(&self, id: &str, data: &T) {
         let id = id.to_owned();
         self.map.write().insert(id, data.clone());
@@ -33,12 +35,12 @@ where
 
 #[test]
 fn single_thread() {
-    let s = Storage::new(RedisMock::default());
+    let s = Storage::with_external(RedisMock::default());
     test_key_value_storage_single_thread(s);
 }
 
 #[test]
 fn multi_thread() {
-    let s = Storage::new(RedisMock::default());
+    let s = Storage::with_external(RedisMock::default());
     test_key_value_storage_multi_thread(s);
 }
